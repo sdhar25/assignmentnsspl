@@ -16,13 +16,14 @@ router.post('/products',async(req,res)=>{
     }
 })
 //q1 count the tagSpecial which is true and max rating
-router.get('/products/:productId',async(req,res)=>{
+router.get('/products',async(req,res)=>{
     try{
+
         const countTagSpe = await Product.aggregate([
             {
                 $match: {
                    productId: {
-                       $ne: req.params.productId
+                       $ne: String(req.body.productId)
                     },
                     tagSpecial:{
                         $eq: true 
@@ -37,7 +38,7 @@ router.get('/products/:productId',async(req,res)=>{
             {
                 $match: {
                    productId: {
-                       $ne: req.params.productId
+                       $ne: String(req.body.productId)
                     },
                     tagSpecial:{
                         $eq: true 
