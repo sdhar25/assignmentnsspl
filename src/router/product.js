@@ -15,43 +15,27 @@ router.post('/products',async(req,res)=>{
         res.status(500).send({err})
     }
 })
-//q1 count the tagSpecial which is true and max rating
+/*q1  given a productId and Write a single MongoDB query to find the count of tagSpecial and 
+maximum value of rating, which have tagSpecial true and given productId is not included.*/
+
 router.get('/products',async(req,res)=>{
     try{
-
-        const countTagSpe = await Product.aggregate([
+        const reqData = await Product.aggregate([
             {
-                $match: {
-                   productId: {
-                       $ne: String(req.body.productId)
-                    },
-                    tagSpecial:{
-                        $eq: true 
-                        }
-                   }
-              },
-              {
-                $count: "countTagSpecial"
-              }
-        ]);
-        const maxRating = await Product.aggregate([
+              $match:{productId:{$ne:String(req.body.productId)},tagSpecial:true}
+            },
             {
-                $match: {
-                   productId: {
-                       $ne: String(req.body.productId)
-                    },
-                    tagSpecial:{
-                        $eq: true 
-                        }
-                   }
-              },
-              {
-                $group: { _id: "$tagSpecial", totalQuantity: { $max: "$rating" } }
-             }
-        ]);
-
+                $group:{_id:"$tagSpecial",maxRating:{$max:"$rating"},
+                countTagSpecial:{$sum:{
+                            "$cond":[{$and:[{$ne:['productId',String(req.body.productId)]},{'tagSpecial':true}]},1,0]
+                        }}
+            }
+            }  
+          ])
         
-        res.status(200).send({countTagSpecial:countTagSpe[0].countTagSpecial,maxRating:maxRating[0].totalQuantity})
+          res.status(200).send(reqData);
+        
+        
     }catch(err)
     {
         console.log(err);
@@ -68,19 +52,14 @@ router.patch('/products',async(req,res)=>{
         const tagId = req.body.tagId;
         
         const newupdata = {year,tagId};
-        const pro = await Product.findOne({productId});
-        if(!pro)
+
+        const pro = await Product.updateOne({productId:productId},{$push:{"tagging":newupdata}});
+        if(pro.modifiedCount ==0)
         {
-            throw new Error("productId not found");
+            throw new Error("Data not updted");
         }
-        //console.log(pro.tagging);
-        const tagObj = pro.tagging;
-        tagObj.push(newupdata);
-        //console.log(tagObj);
-        pro.tagging = tagObj;
-        await pro.save();
-        res.send(pro);
-        //console.log(newupdata);
+        res.send({"sucess":1,"msg":"Data has been updated"});
+       
     }catch(err)
     {
         res.status(500).send(err.message)
@@ -89,19 +68,23 @@ router.patch('/products',async(req,res)=>{
 
 // q3 given a productId and tagging year, write a mongoDB query to remove tagging which is greater than the given year.
 router.patch('/products_tag',async(req,res)=>{
-    const productId = String(req.body.productId);
-    const year= req.body.year;
-    const pro = await Product.findOne({productId});
-        if(!pro)
+    try
+    {
+        const productId = String(req.body.productId);
+        const year= req.body.year;
+ 
+        //using mongoquery
+        const pro = await Product.updateOne({productId:productId},{$pull:{"tagging":{"year":{$gt:year}}}});
+        if(pro.modifiedCount ==0)
         {
-            throw new Error("productId not found");
+            throw new Error("Data not updated");
         }
-        const tagObj = pro.tagging;
-       
-        const greater = tagObj.filter(item => item.year <= year );
-         pro.tagging = greater;
-         await pro.save();
-        res.send(pro);
+        res.send({"sucess":1,"msg":"Data has been updated"});
+    }catch(err)
+    {
+        res.status(500).send(err.message)
+    }
+    
     
 })
 
